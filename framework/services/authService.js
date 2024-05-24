@@ -25,6 +25,12 @@ class AuthService {
 
     static __SECRET = "A239247DAWJ23981VEMA23";
     static __TOKEN_EXPIRATION_TIME = "1h";
+    static __PSW_SALT_STEPS = 10;
+
+    static CREATE_SERVICE() {
+        //this is a function to generate the service with all the required dependencies
+        return new AuthService( accountRepository() );
+    }
 
     constructor(accountRepo) {
         this.accountRepo = accountRepo;
@@ -36,7 +42,14 @@ class AuthService {
     }
     
     async getUserbyUsername(username) {
-
+        if (!username) {return undefined;}
+        try {
+            return await this.accountRepo.getUserbyUsername(username);
+        }
+        catch(error) {
+            console.error(error.message);
+            return undefined;
+        }
     }
 
     async getAllUsers() {
@@ -68,17 +81,14 @@ class AuthService {
         }
 
         async register(request, user) {
-            if (User.isValid(user) ) {
-                //we hash the user password and attempt to create the user then we sign it in
-                let hashedPsw = await bcrypt.hash(user.password, 10);
-                user.password = hashedPsw; //we set the new password
-                let createdUser = await this.accountRepo.addUser(user);
-                //then we just sign it
-                this.__signUser(request, createdUser);
-            }
-            else {
-                throw new Error(User.ERRORS.INVALID_MODEL);
-            }
+            if (!User.isValid(user) ) {throw new Error(User.ERRORS.INVALID_MODEL);}
+            //we hash the user password and attempt to create the user then we sign it in
+            let hashedPsw = await bcrypt.hash(user.password, AuthService.__PSW_SALT_STEPS);
+            user.password = hashedPsw; //we set the new password
+            let createdUser = await this.accountRepo.addUser(user);
+            //then we just sign it
+            await this.__signUser(request, createdUser);
+            return createdUser;
         }
 
         verifyFromSession(request) {
@@ -112,23 +122,28 @@ class AuthService {
             });
         }
 
-        __signUser(request, userData) {
+        async __signUser(request, userData) {
             // Create a JWT token
+            console.log(userData);
+            let username = userData.username;
             const token = jwt.sign(userData, AuthService.__SECRET, { expiresIn: AuthService.__TOKEN_EXPIRATION_TIME });
             //we register it in the session
+            /*
             request.session.authorization = {
                 token,
                 username
             }
+            */
         }
 
     //#endregion
+
+    async dispose() {
+        await this.accountRepo.dispose();
+        delete this.accountRepo;
+    }
 }
 
-//this is a function to generate the service with all the required dependencies
-function createAuthService() {
-    const accountRepository = accountRepository();
-    return new AuthService(accountRepository);
-}
 
-module.exports = createAuthService;
+
+module.exports = AuthService.CREATE_SERVICE;

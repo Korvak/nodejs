@@ -1,5 +1,5 @@
 const express = require("express");
-const authService = require("../services/authService.js");
+const authServiceProvider = require("../services/authService.js");
 
 const AuthRoute = express.Router();
 
@@ -10,7 +10,9 @@ AuthRoute.post("/login", async (req,res) => {
         username : req.body.username,
         password : req.body.password
     }
+    let authService = authServiceProvider();
     await authService.login(req, user);
+    await authService.dispose();
 });
 
 
@@ -22,8 +24,11 @@ AuthRoute.post("/register", async (req,res) => {
         name : req.body.name,
         surname : req.body.surname,
         password : req.body.password,
-    }
-    await authService.register(req, user);
+    };
+    let authService = authServiceProvider();
+    user = await authService.register(req, user);
+    await authService.dispose();
+    res.send(`created user ${user.username} with password : ${user.password}`);
 });
 
 module.exports = AuthRoute;
