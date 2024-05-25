@@ -2,8 +2,7 @@ const express = require("express");
 
 
 var Routes = {
-    "/account" : "./accountRoute.js",
-    "/alfa" : "./aldwa.js"
+    "/account" : "./accountRoute.js"
 };
 
 var RegisteredRoutes = {};
