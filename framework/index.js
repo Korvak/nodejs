@@ -7,7 +7,7 @@ const session = require('express-session');
 */
 
 const routeResolver = require("./routes/routeResolver.js");
-
+const middlewareResolver = require("./middlewares/middlewareResolver.js");
 
 
 const PORT = 4000;
@@ -26,7 +26,8 @@ app.get("/", (req,res) => {
 
 //we register the routes
 routeResolver.mapRoutes(app);
-
+//then we have to use the middleware resolver which requires the routeResolver routes
+middlewareResolver.mapMiddlewares(app, routeResolver.Routes);
 
 //then we listen for the port
 app.listen(PORT, () => {
