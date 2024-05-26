@@ -5,7 +5,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
 const session = require('express-session');
 */
-
+//contains all the configuration data etc...
+const configurationService = require("./config/configurationService.js");
 const routeResolver = require("./routes/routeResolver.js");
 const middlewareResolver = require("./middlewares/middlewareResolver.js");
 

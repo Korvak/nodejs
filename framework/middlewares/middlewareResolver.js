@@ -8,6 +8,15 @@ var Middlewares = {
     */
 }
 
+//contains all the configuration data etc...
+const ConfigurationService = require("../config/configurationService.js");
+//we create the configuration service
+const Configuration = ConfigurationService();
+
+if (Configuration.hasMiddlewares() ) {
+    Middlewares = Configuration.getMiddlewares();
+}
+
 
 
 function mapMiddlewares(app, Routes) {

@@ -7,6 +7,17 @@ var Routes = {
 
 var RegisteredRoutes = {};
 
+//contains all the configuration data etc...
+const ConfigurationService = require("../config/configurationService.js");
+//we create the configuration service
+const Configuration = ConfigurationService();
+//we check if it has routes registered
+if (Configuration.hasRoutes() ) {
+    Routes = Configuration.getRoutes();
+}
+
+
+
 function registerRoute(routeName, route) {
     if (typeof route != typeof route) {
         //we throw an error
