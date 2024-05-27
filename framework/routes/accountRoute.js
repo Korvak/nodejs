@@ -11,8 +11,15 @@ AuthRoute.post("/login", async (req,res) => {
         password : req.body.password
     }
     let authService = authServiceProvider();
-    await authService.login(req, user);
+    let result = await authService.login(req, user);
     await authService.dispose();
+    if (result) {
+        return res.send(`logged in as ${user.username}.`);
+    }
+    else {
+        return res.status(403).json({message: "username or password do not match."});
+    }
+    
 });
 
 
@@ -28,7 +35,13 @@ AuthRoute.post("/register", async (req,res) => {
     let authService = authServiceProvider();
     user = await authService.register(req, user);
     await authService.dispose();
-    res.send(`created user ${user.username} with password : ${user.password}`);
+    res.send(`created user : ${user.username}.`);
+});
+
+AuthRoute.post("/logout", async (req,res) => {
+    let authService = authServiceProvider();
+    await authService.logout(req);
+    res.send("logged out");
 });
 
 module.exports = AuthRoute;

@@ -1,6 +1,4 @@
-//could use json file encrypt for safety etc..
-
-var fs = require('fs');
+//could use json file encrypt for safety etc..;
 
 
 class ConfigurationRegion {
@@ -88,10 +86,18 @@ class Configuration {
             return region != undefined ? this.configs[region][key] : this.configs;
         }
 
-        getSecret(key) {return this.secrets[key];}
+    //#endregion
+    //#region secrets
+
+        getSecret(key, region = undefined) {
+            return region != undefined ? this.secrets[region][key] : this.secrets[key];
+        }
+
+        getSecretRegion(name) {
+            return this.secrets[name];
+        }
 
     //#endregion
-
 }
 
 

@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
-const session = require('express-session');
 
 const accountRepository = require("../repositories/accountRepository.js");
+const ConfigurationService = require("../config/configurationService.js");
+
 
 class User {
 
@@ -17,23 +18,30 @@ class User {
     static isValid(user) {
         return user.username && user.password; 
     }
+    
+    static copy(user) {
+        let data = {};
+        data.username = user.username;
+        data.password = user.password;
+        data.email = user.email;
+        data.name = user.name;
+        data.surname = user.surname;
+        return data;
+    }
 }
 
 
 
 class AuthService {
 
-    static __SECRET = "A239247DAWJ23981VEMA23";
-    static __TOKEN_EXPIRATION_TIME = "1h";
-    static __PSW_SALT_STEPS = 10;
-
     static CREATE_SERVICE() {
         //this is a function to generate the service with all the required dependencies
-        return new AuthService( accountRepository() );
+        return new AuthService( ConfigurationService(), accountRepository() );
     }
 
-    constructor(accountRepo) {
-        this.accountRepo = accountRepo;
+    constructor(configuration , accountRepo) {
+        this.__accountRepo = accountRepo;
+        this.__configuration = configuration;
     }
 
     //#region user managment
@@ -44,7 +52,7 @@ class AuthService {
     async getUserbyUsername(username) {
         if (!username) {return undefined;}
         try {
-            return await this.accountRepo.getUserbyUsername(username);
+            return await this.__accountRepo.getUserbyUsername(username);
         }
         catch(error) {
             console.error(error.message);
@@ -76,32 +84,48 @@ class AuthService {
             let userData = await this.getUserbyUsername(user.username);
             //we check if the password match
             let isMatch = await bcrypt.compare(user.password, userData.password);
-            if (isMatch) { this.__signUser(request, userData); }   
-            else { throw new Error("password doesn't match"); }     
+            if (isMatch) { return this.__signUser(request, userData); }   
+            else {
+                return undefined;
+                //throw new Error("username or password do not match."); 
+            }
         }
 
-        async register(request, user) {
+        async register(request, user, signIn = true) {
             if (!User.isValid(user) ) {throw new Error(User.ERRORS.INVALID_MODEL);}
             //we hash the user password and attempt to create the user then we sign it in
-            let hashedPsw = await bcrypt.hash(user.password, AuthService.__PSW_SALT_STEPS);
+            let hashedPsw = await bcrypt.hash(user.password, this.__configuration.getSecret("salt_steps", "auth") );
             user.password = hashedPsw; //we set the new password
-            let createdUser = await this.accountRepo.addUser(user);
-            //then we just sign it
-            await this.__signUser(request, createdUser);
+            let createdUser = await this.__accountRepo.addUser(user);
+            console.warn("created", createdUser);
+            if (signIn) {await this.__signUser(request, createdUser); }
+            console.log("register session data", request.session);
             return createdUser;
         }
 
-        verifyFromSession(request) {
+        async logout(request) {
+            //in this case it justs logs out of the session
+            request.session.destroy();
+        }
+
+        async verifyFromSession(request) {
             try {
+                console.log("current session data", request.session);
                 if( request.session.authorization) {
+                    //we fetch the token from the session which we set in the login
                     const token = request.session.authorization['accessToken'];
-                    let decodedData = this.verify(token);
+                    console.warn("token", token);
+                    let decodedData = await this.verify(token);
+                    console.warn("decoded", decodedData);
+                    //we set the request user if not undefined
                     if (decodedData !== undefined) {
                         request.user = decodedData;
                         return true;
                     }
                     return false;
                 }
+                console.warn(" no request session authorization available.");
+                return false;
             }
             catch(error) {
                 console.error(error.message);
@@ -111,36 +135,54 @@ class AuthService {
 
         verify(token) {
             return new Promise( (resolve, reject) => {
-                jwt.verify(token , AuthService.__SECRET, (err, user) => {
-                    if (err) {
-                        resolve(undefined);
-                    }
-                    else {
-                        resolve(user);
-                    }
-                });
+                try {
+                    jwt.verify(
+                        token , this.__configuration.getSecret("secret", "auth"),
+                        (err, user) => {
+                            if (err) {
+                                resolve(undefined);
+                            }
+                            else {
+                                resolve(user);
+                            }
+                        }
+                    );
+                }
+                catch(error) {reject(error);}
             });
         }
 
         async __signUser(request, userData) {
             // Create a JWT token
-            console.log(userData);
+            console.log("signing", userData);
             let username = userData.username;
-            const token = jwt.sign(userData, AuthService.__SECRET, { expiresIn: AuthService.__TOKEN_EXPIRATION_TIME });
+            const token = jwt.sign(
+                userData,
+                this.__configuration.getSecret("secret", "auth"),
+                 { expiresIn: this.__configuration.getSecret("token_expiration_time", "auth") });
             //we register it in the session
-            /*
             request.session.authorization = {
-                token,
-                username
-            }
-            */
+                "accessToken" : token,
+                "username" : username
+            };
+            //we return the token we just created
+            return token;
         }
 
     //#endregion
 
     async dispose() {
-        await this.accountRepo.dispose();
-        delete this.accountRepo;
+        try {
+            await this.__accountRepo.dispose();
+            delete this.__accountRepo;
+            delete this.__configuration;
+            delete this;
+            return true;
+        }
+        catch(error) {
+            console.error(error.message);
+            return false;
+        }
     }
 }
 

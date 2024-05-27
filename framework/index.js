@@ -1,9 +1,10 @@
 const express = require("express");
+const session = require('express-session');
 //const bodyParser = require("body-parser");
 /*
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
-const session = require('express-session');
+
 */
 //contains all the configuration data etc...
 const ConfigurationService = require("./config/configurationService.js");
@@ -21,23 +22,34 @@ const Configuration = ConfigurationService(app);
 
     //app.use(bodyParser.json()); // support json encoded bodies
     //app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
+
     //we use the express default ones
     app.use(express.urlencoded({ extended: false }));
     app.use(express.json());
     //we enable express sessions
-    app.use(session(
-        {secret: Configuration.getSecret("session_secret")},resave=true,saveUninitialized=true));
-
-    app.use(express.json());
+    app.use(
+        session(
+            {
+                secret: Configuration.getSecret("secret", "sessions"),
+                cookie : {
+                    maxAge : 6000
+                },
+                resave : true,
+                saveUninitialized : true
+            }
+        )
+    );
 
 
 //#endregion
 
-
-//we register the routes
-routeResolver.mapRoutes(app);
 //then we have to use the middleware resolver which requires the routeResolver routes
 middlewareResolver.mapMiddlewares(app, routeResolver.Routes);
+//we register the routes
+routeResolver.mapRoutes(app);
+
+
+
 
 //then we listen for the port
 app.listen(PORT, () => {
