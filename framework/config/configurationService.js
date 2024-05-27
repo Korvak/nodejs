@@ -14,14 +14,19 @@ class ConfigurationRegion {
     }
 }
 
-
+//need to change configuration so it fetches config files based on env
+//need to add secure encryption for configuration
+//need to add a tool to securely add new secret keys
 class Configuration {
 
     static __CONFIG_FILE_PATH = "./config.json";
     static __ROUTES_FILE_PATH = "./routes.json";
     static __MIDDLEWARE_FILE_PATH = "./middlewares.json";
+    static __SECRETS_FILE_PATH = "./secrets.json";
 
-    static CREATE_SERVICE() {
+    static ENV = undefined;
+
+    static CREATE_SERVICE(app = undefined) {
         return new Configuration();
     }
 
@@ -31,6 +36,12 @@ class Configuration {
         //configs
         try {
             this.configs = require(Configuration.__CONFIG_FILE_PATH);
+        }
+        catch(error) {
+            console.error(error.message);
+        }
+        try {
+            this.secrets = require(Configuration.__SECRETS_FILE_PATH);
         }
         catch(error) {
             console.error(error.message);
@@ -63,7 +74,7 @@ class Configuration {
         getMiddlewares() { return this.middlewares; }
 
     //#endregion
-    //#region config
+    //#region config and secrets
 
         hasRegion(name) {
             return this.configs[name] !== undefined && this.configs[name] != {};
@@ -76,6 +87,8 @@ class Configuration {
         getConfiguration(key, region = undefined) {
             return region != undefined ? this.configs[region][key] : this.configs;
         }
+
+        getSecret(key) {return this.secrets[key];}
 
     //#endregion
 
