@@ -1,4 +1,3 @@
 {
-    "/account" : "./accountRoute.js",
-    "/test" : "./testRoute.js"
+    "/account" : "./accountRoute.js"
 }

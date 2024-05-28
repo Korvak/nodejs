@@ -1,11 +1,5 @@
 
 var Middlewares = {
-    /*
-    "app" : {
-        "path" : "/account/game",
-        "middleware" : "adaflw.js"
-    }
-    */
 }
 
 //contains all the configuration data etc...
